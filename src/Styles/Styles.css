@@ -1,0 +1,14 @@
+/*BASENAVBAR*/
+
+.BaseNavbar-appBar {
+    background-color: #E66200;
+}
+
+.BaseNavbar-typography {
+    justify-content: center;
+}
+
+.BaseNavbar-admin {
+    text-decoration: none;
+    color: inherit;
+}

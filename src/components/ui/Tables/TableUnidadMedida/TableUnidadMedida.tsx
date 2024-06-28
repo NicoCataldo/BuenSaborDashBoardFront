@@ -1,0 +1,197 @@
+import React, { useState, useEffect } from "react";
+import {
+  Button,
+  Container,
+  Box,
+  Typography,
+  Alert,
+  TextField,
+  Grid,
+} from "@mui/material";
+import TableComponent from "../Table/Table";
+import { IUnidadMedida } from "../../../../types/IUnidadMedida";
+import UnidadMedidaService from "../../../../services/UnidadMedidaService";
+import { onDelete } from "../../../../utils/utils";
+import EmptyState from "../../Cards/EmptyState/EmptyState";
+import swal from "sweetalert2";
+import Column from "../../../../types/Column";
+import ModalUnidadMedida from "../../Modals/ModalUnidadDeMedida";
+import useAuthToken from "../../../../hooks/useAuthToken";
+
+const TableUnidadMedida: React.FC = () => {
+  const [units, setUnits] = useState<IUnidadMedida[]>([]);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [errorMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialData, setInitialData] = useState<IUnidadMedida | undefined>(
+    undefined
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const url = import.meta.env.VITE_API_URL;
+  const unidadMedidaService = new UnidadMedidaService();
+  const getToken = useAuthToken();
+
+  useEffect(() => {
+    fetchUnits();
+  }, []);
+
+  const fetchUnits = async () => {
+    try {
+      const response = await unidadMedidaService.getAll(url + "/UnidadMedida");
+      setUnits(response);
+    } catch (error) {
+      console.error("Error obteniendo unidades de medida:", error);
+    }
+  };
+
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditId(null);
+    setInitialData(undefined);
+  };
+
+  const handleAddOrUpdate = async (unit: IUnidadMedida) => {
+    try {
+      const token = await getToken();
+      if (editId !== null) {
+        await unidadMedidaService.putSec(
+          url + "/UnidadMedida",
+          editId,
+          unit,
+          token
+        );
+        const updatedUnits = units.map((u) => (u.id === editId ? unit : u));
+        setUnits(updatedUnits);
+        swal.fire({
+          icon: "success",
+          title: "¡Perfecto!",
+          text: "La unidad de medida ha sido actualizada correctamente",
+          confirmButtonColor: "#E66200",
+        });
+      } else {
+        unit.id = Date.now();
+        await unidadMedidaService.postSec(url + "/UnidadMedida", unit, token);
+        setUnits([...units, unit]);
+        swal.fire({
+          icon: "success",
+          title: "¡Perfecto!",
+          text: "La unidad de medida ha sido agregada correctamente",
+          confirmButtonColor: "#E66200",
+        });
+      }
+      handleModalClose();
+    } catch (error) {
+      console.error("Error agregando/modificando unidad de medida:", error);
+    }
+  };
+
+  const handleEdit = (unit: IUnidadMedida) => {
+    setInitialData(unit);
+    setEditId(unit.id);
+    handleModalOpen();
+  };
+
+  const handleDelete = async (unit: IUnidadMedida) => {
+    const token = await getToken();
+    try {
+      await onDelete(
+        unit,
+        async (unitToDelete: IUnidadMedida) => {
+          await unidadMedidaService.deleteSec(
+            url + "/UnidadMedida",
+            unitToDelete.id,
+            token
+          );
+        },
+        fetchUnits,
+        () => {},
+        (error: any) => {
+          console.error("Error al eliminar unidad:", error);
+        }
+      );
+    } catch (error) {
+      console.error("Error al eliminar unidad:", error);
+    }
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const filteredUnits = units.filter((unit) =>
+    unit.denominacion.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const columns: Column[] = [
+    {
+      id: "denominacion",
+      label: "Nombre",
+      renderCell: (rowData) => <>{rowData.denominacion}</>,
+    },
+  ];
+
+  return (
+    <Container sx={{ mt: 5 }}>
+      <Typography variant="h4" sx={{ mt: 8, mb: 2 }}>
+        Unidades de medida
+      </Typography>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={8}>
+          <TextField
+            fullWidth
+            label="Buscar por nombre"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleModalOpen}
+            sx={{
+              width: "100%",
+              backgroundColor: "#E66200",
+              "&:hover": {
+                bgcolor: "#BB6201",
+              },
+              fontSize: "1.0rem",
+            }}
+          >
+            Agregar unidad de medida
+          </Button>
+        </Grid>
+      </Grid>
+      {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+
+      {filteredUnits.length === 0 ? (
+        <Box sx={{ my: 5 }}>
+          <EmptyState
+            title="¡No tienes unidades de medida!"
+            description="Genera unidades de medida con el formulario."
+          />
+        </Box>
+      ) : (
+        <TableComponent
+          data={filteredUnits}
+          columns={columns}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
+      <ModalUnidadMedida
+        open={isModalOpen}
+        onClose={handleModalClose}
+        onSubmit={handleAddOrUpdate}
+        initialData={initialData}
+      />
+    </Container>
+  );
+};
+
+export default TableUnidadMedida;

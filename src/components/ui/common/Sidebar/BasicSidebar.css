@@ -1,0 +1,21 @@
+.navlink2 {
+    margin: 2px;
+    color: white;
+    text-decoration: none; /* Para quitar el subrayado del link */
+    
+}
+
+.navlink2:hover {
+    color: black;
+}
+
+.nav-divider {
+    border-bottom: 2px solid white;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.CNavItem{
+    margin-bottom: 5px;
+}
+
